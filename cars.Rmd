@@ -1,0 +1,129 @@
+---
+title: "Cars"
+output: html_document
+date: "2024-10-15"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+require(tidyverse)
+require(umap)
+require(papaja)
+require(Hmisc)
+require(ggimage)
+require(cowplot)
+
+performance = read_csv('outputs/performance.csv', col_names = c('loss', 'binary_accuracy', 'mse')) %>% 
+  mutate(epoch = seq_len(n()) - 1) %>% 
+  select(epoch, everything())
+```
+
+
+
+## Compile all activations into a single dataframe (to subsequently compress)
+```{r}
+acts_files = list.files("outputs", full.names = T)
+cars = read_csv("data/cars.csv")
+
+all_acts_list = list()
+
+for (filename in acts_files){
+  if (str_detect(filename, "all_acts")){
+    
+    epoch = str_extract(filename, "(?<=acts_)\\d+(?=\\.csv)")
+        
+    acts = read_csv(filename, col_names = F) %>% 
+      mutate(car = cars$car,
+             epoch = as.numeric(epoch)) %>% 
+      select(car, epoch, everything())
+    
+    all_acts_list[[epoch]] = acts
+    
+  }
+}
+
+
+```
+
+```{r}
+
+pcs = prcomp(list_rbind(all_acts_list)[,3:7])$x %>% 
+  data.frame() %>% 
+  mutate(car = list_rbind(all_acts_list)$car,
+         epoch = list_rbind(all_acts_list)$epoch) %>% 
+  select(car, epoch, everything())
+
+```
+
+### Generate plots for words
+```{r}
+source("plot_cars.R")
+```
+
+
+
+### Cluster dendrogram for words
+
+```{r}
+
+
+
+```
+
+
+
+
+## Now, the animals
+
+
+```{r}
+
+animal_acts_files = list.files('outputs/animals', full.names = T)
+animals = read_csv('data/animals.csv')
+
+animal_acts_list = list()
+
+for (filename in animal_acts_files){
+  if (str_detect(filename, "\\.csv")){
+    
+    epoch = str_extract(filename, "(?<=acts_)\\d+(?=\\.csv)")
+        
+    acts = read_csv(filename, col_names = F) %>% 
+      mutate(animal = animals$animal,
+             epoch = as.numeric(epoch)) %>% 
+      select(animal, epoch, everything())
+    
+    animal_acts_list[[epoch]] = acts
+    
+  }
+}
+
+pcs_animals = prcomp(list_rbind(animal_acts_list)[,3:5])$x %>% 
+  data.frame() %>% 
+  mutate(animal = list_rbind(animal_acts_list)$animal,
+         epoch = list_rbind(animal_acts_list)$epoch) %>% 
+  select(animal, epoch, everything())
+
+```
+
+### Generate plots for the animals
+```{r}
+source("plot_animals.R")
+```
+
+
+
+### Cluster dendrogram for animals
+```{r}
+
+dists = dist(scale(animal_acts_list[["50"]][, 2:4])) %>% 
+  mutate(animal = animal_acts_list[["50"]]$animal)
+
+cluster = hclust()
+
+
+plot(as.dendrogram(cluster))
+
+
+```
+
